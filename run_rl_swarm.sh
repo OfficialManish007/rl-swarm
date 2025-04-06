@@ -101,21 +101,33 @@ if [ "$CONNECT_TO_TESTNET" = "True" ]; then
     # Set up trap to catch Ctrl+C and call cleanup
     trap cleanup INT
 fi
-#lets go!
+# Let's go!
 echo "Getting requirements..."
 pip install -r "$ROOT"/requirements-hivemind.txt > /dev/null
 pip install -r "$ROOT"/requirements.txt > /dev/null
 
-if ! which nvidia-smi; then
-   #You don't have a NVIDIA GPU
-   CONFIG_PATH="$ROOT/hivemind_exp/configs/mac/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
-elif [ -n "$CPU_ONLY" ]; then
-   # ... or we don't want to use it
-   CONFIG_PATH="$ROOT/hivemind_exp/configs/mac/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
+# Debugging: Show CPU_ONLY status
+echo "CPU_ONLY is set to: '$CPU_ONLY'"
+
+# Force CPU mode if CPU_ONLY is set
+if [ -n "$CPU_ONLY" ]; then
+    echo "CPU_ONLY is enabled. Forcing CPU usage."
+    export CUDA_VISIBLE_DEVICES=-1
+    CONFIG_PATH="$ROOT/hivemind_exp/configs/mac/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
+
+# Otherwise, check for GPU availability
+elif ! which nvidia-smi > /dev/null 2>&1; then
+    echo "No NVIDIA GPU detected. Using CPU config."
+    CONFIG_PATH="$ROOT/hivemind_exp/configs/mac/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
+
 else
-   #NVIDIA GPU found
-   pip install -r "$ROOT"/requirements_gpu.txt > /dev/null
-   CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
+    echo "NVIDIA GPU detected. Using GPU config."
+    pip install -r "$ROOT"/requirements_gpu.txt > /dev/null
+    CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
+fi
+
+# Confirm the selected config path
+echo "Using config: $CONFIG_PATH"
 fi
 
 echo ">> Done!"
